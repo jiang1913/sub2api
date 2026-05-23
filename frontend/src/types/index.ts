@@ -179,6 +179,20 @@ export interface CustomEndpoint {
   description: string
 }
 
+export interface GatewayEntryRule {
+  id: string
+  name: string
+  description: string
+  enabled: boolean
+  match_type: 'exact' | 'prefix' | 'regex' | string
+  path: string
+  upstream_type: 'anthropic' | 'openai' | 'gemini' | 'antigravity' | string
+  intercept_strategy: 'pass' | 'rewrite' | 'block' | string
+  rewrite_target: string
+  group_ids: number[]
+  priority: number
+}
+
 export interface LoginAgreementDocument {
   id: string
   title: string
@@ -214,6 +228,7 @@ export interface PublicSettings {
   table_page_size_options: number[]
   custom_menu_items: CustomMenuItem[]
   custom_endpoints: CustomEndpoint[]
+  gateway_entry_rules: GatewayEntryRule[]
   linuxdo_oauth_enabled: boolean
   dingtalk_oauth_enabled?: boolean
   wechat_oauth_enabled: boolean

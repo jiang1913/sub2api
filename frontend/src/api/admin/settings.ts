@@ -6,6 +6,7 @@
 import { apiClient } from "../client";
 import type {
   CustomEndpoint,
+  GatewayEntryRule,
   CustomMenuItem,
   LoginAgreementDocument,
   NotifyEmailEntry,
@@ -384,6 +385,7 @@ export interface SystemSettings {
   backend_mode_enabled: boolean;
   custom_menu_items: CustomMenuItem[];
   custom_endpoints: CustomEndpoint[];
+  gateway_entry_rules: GatewayEntryRule[];
   // SMTP settings
   smtp_host: string;
   smtp_port: number;
@@ -629,6 +631,7 @@ export interface UpdateSettingsRequest {
   backend_mode_enabled?: boolean;
   custom_menu_items?: CustomMenuItem[];
   custom_endpoints?: CustomEndpoint[];
+  gateway_entry_rules?: GatewayEntryRule[];
   smtp_host?: string;
   smtp_port?: number;
   smtp_username?: string;
