@@ -395,36 +395,6 @@ func registerClaudeCompatibleRoutes(
 	}
 }
 
-func registerOpenAIPrefixAliases(
-	r *gin.Engine,
-	h *handler.Handlers,
-	bodyLimit gin.HandlerFunc,
-	clientRequestID gin.HandlerFunc,
-	opsErrorLogger gin.HandlerFunc,
-	endpointNorm gin.HandlerFunc,
-	apiKeyAuth middleware.APIKeyAuthMiddleware,
-	requireGroupAnthropic gin.HandlerFunc,
-) {
-	for _, prefix := range []string{"/openai", "/openai/v1"} {
-		registerClaudeCompatibleRoutes(r.Group(prefix), h, bodyLimit, clientRequestID, opsErrorLogger, endpointNorm, apiKeyAuth, requireGroupAnthropic)
-	}
-}
-
-func registerClaudePrefixAliases(
-	r *gin.Engine,
-	h *handler.Handlers,
-	bodyLimit gin.HandlerFunc,
-	clientRequestID gin.HandlerFunc,
-	opsErrorLogger gin.HandlerFunc,
-	endpointNorm gin.HandlerFunc,
-	apiKeyAuth middleware.APIKeyAuthMiddleware,
-	requireGroupAnthropic gin.HandlerFunc,
-) {
-	for _, prefix := range []string{"/claude", "/claude/v1"} {
-		registerClaudeCompatibleRoutes(r.Group(prefix), h, bodyLimit, clientRequestID, opsErrorLogger, endpointNorm, apiKeyAuth, requireGroupAnthropic)
-	}
-}
-
 func countTokensHandler(h *handler.Handlers) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if getGroupPlatform(c) == service.PlatformOpenAI {
