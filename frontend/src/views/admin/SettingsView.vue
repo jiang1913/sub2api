@@ -4525,6 +4525,174 @@
                 </button>
               </div>
 
+              <!-- Gateway Entry Rules -->
+              <div>
+                <label
+                  class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  {{ localText("全局入口规则", "Gateway entry rules") }}
+                </label>
+                <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
+                  {{
+                    localText(
+                      "统一维护可复用入口规则，并绑定给指定分组；未绑定分组时所有分组可用。",
+                      "Manage reusable gateway entry rules and bind them to groups. Leave groups empty to allow all groups.",
+                    )
+                  }}
+                </p>
+
+                <div class="space-y-3">
+                  <div
+                    v-for="(rule, index) in form.gateway_entry_rules"
+                    :key="rule.id || index"
+                    class="rounded-lg border border-gray-200 p-4 dark:border-dark-600"
+                  >
+                    <div class="mb-3 flex items-center justify-between gap-3">
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                          <span
+                            class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                          >
+                            {{ rule.name || localText("未命名规则", "Untitled rule") }}
+                          </span>
+                          <span class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-500 dark:bg-dark-700 dark:text-gray-400">
+                            {{ rule.path || "/" }}
+                          </span>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          {{ gatewayEntrySummary(rule) }}
+                        </p>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <Toggle v-model="rule.enabled" />
+                        <button
+                          type="button"
+                          class="rounded p-1 text-red-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                          @click="removeGatewayEntryRule(index)"
+                        >
+                          <Icon name="trash" size="sm" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                          {{ localText("名称", "Name") }}
+                        </label>
+                        <input v-model="rule.name" type="text" class="input text-sm" />
+                      </div>
+                      <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                          {{ localText("入口路径", "Entry path") }}
+                        </label>
+                        <input
+                          v-model="rule.path"
+                          type="text"
+                          class="input font-mono text-sm"
+                          placeholder="/team-openai"
+                        />
+                      </div>
+                      <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                          {{ localText("匹配方式", "Match type") }}
+                        </label>
+                        <select v-model="rule.match_type" class="input text-sm">
+                          <option value="prefix">prefix</option>
+                          <option value="exact">exact</option>
+                          <option value="regex">regex</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                          {{ localText("上游类型", "Upstream type") }}
+                        </label>
+                        <select v-model="rule.upstream_type" class="input text-sm">
+                          <option value="anthropic">anthropic</option>
+                          <option value="openai">openai</option>
+                          <option value="gemini">gemini</option>
+                          <option value="antigravity">antigravity</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                          {{ localText("拦截策略", "Strategy") }}
+                        </label>
+                        <select v-model="rule.intercept_strategy" class="input text-sm">
+                          <option value="rewrite">rewrite</option>
+                          <option value="pass">pass</option>
+                          <option value="block">block</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                          {{ localText("重写目标", "Rewrite target") }}
+                        </label>
+                        <input
+                          v-model="rule.rewrite_target"
+                          type="text"
+                          class="input font-mono text-sm"
+                          :disabled="rule.intercept_strategy !== 'rewrite'"
+                          placeholder="/v1"
+                        />
+                      </div>
+                      <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                          {{ localText("优先级", "Priority") }}
+                        </label>
+                        <input v-model.number="rule.priority" type="number" class="input text-sm" />
+                      </div>
+                      <div class="sm:col-span-2">
+                        <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                          {{ localText("绑定分组", "Bound groups") }}
+                        </label>
+                        <div class="grid max-h-40 grid-cols-1 gap-2 overflow-y-auto rounded border border-gray-200 p-2 sm:grid-cols-2 dark:border-dark-600">
+                          <label
+                            v-for="group in allGatewayGroups"
+                            :key="group.id"
+                            class="flex items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-dark-700"
+                          >
+                            <input
+                              type="checkbox"
+                              class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                              :checked="rule.group_ids.includes(group.id)"
+                              @change="toggleGatewayEntryRuleGroup(rule, group.id)"
+                            />
+                            <span class="truncate text-gray-700 dark:text-gray-300">
+                              {{ group.name }}
+                            </span>
+                            <span class="font-mono text-[11px] text-gray-400">
+                              {{ group.platform }}
+                            </span>
+                          </label>
+                          <span
+                            v-if="allGatewayGroups.length === 0"
+                            class="px-2 py-1 text-xs text-gray-400"
+                          >
+                            {{ localText("暂无分组", "No groups") }}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="sm:col-span-2 lg:col-span-3">
+                        <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                          {{ localText("描述", "Description") }}
+                        </label>
+                        <input v-model="rule.description" type="text" class="input text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  class="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 px-4 py-2.5 text-sm text-gray-500 transition-colors hover:border-primary-400 hover:text-primary-600 dark:border-dark-600 dark:text-gray-400 dark:hover:border-primary-500 dark:hover:text-primary-400"
+                  @click="addGatewayEntryRule"
+                >
+                  <Icon name="plus" size="sm" />
+                  {{ localText("添加入口规则", "Add entry rule") }}
+                </button>
+              </div>
+
               <!-- Contact Info -->
               <div>
                 <label
@@ -6549,6 +6717,7 @@ import type {
 } from "@/api/admin/settings";
 import type {
   AdminGroup,
+  GatewayEntryRule,
   LoginAgreementDocument,
   NotifyEmailEntry,
   Proxy,
@@ -6694,6 +6863,7 @@ const adminApiKeyMasked = ref("");
 const adminApiKeyOperating = ref(false);
 const newAdminApiKey = ref("");
 const subscriptionGroups = ref<AdminGroup[]>([]);
+const allGatewayGroups = ref<AdminGroup[]>([]);
 
 // Overload Cooldown (529) 状态
 const overloadCooldownLoading = ref(true);
@@ -6905,6 +7075,7 @@ const form = reactive<SettingsForm>({
     endpoint: string;
     description: string;
   }>,
+  gateway_entry_rules: [] as GatewayEntryRule[],
   frontend_url: "",
   smtp_host: "",
   smtp_port: 587,
@@ -7564,6 +7735,45 @@ function removeEndpoint(index: number) {
   form.custom_endpoints.splice(index, 1);
 }
 
+function addGatewayEntryRule() {
+  const next = form.gateway_entry_rules.length + 1;
+  form.gateway_entry_rules.push({
+    id: `entry-${Date.now().toString(36)}`,
+    name: localText(`入口规则 ${next}`, `Entry rule ${next}`),
+    description: "",
+    enabled: true,
+    match_type: "prefix",
+    path: `/entry-${next}`,
+    upstream_type: "anthropic",
+    intercept_strategy: "rewrite",
+    rewrite_target: "/v1",
+    group_ids: [],
+    priority: 0,
+  });
+}
+
+function removeGatewayEntryRule(index: number) {
+  form.gateway_entry_rules.splice(index, 1);
+}
+
+function toggleGatewayEntryRuleGroup(rule: GatewayEntryRule, groupID: number) {
+  const ids = new Set(rule.group_ids || []);
+  if (ids.has(groupID)) {
+    ids.delete(groupID);
+  } else {
+    ids.add(groupID);
+  }
+  rule.group_ids = Array.from(ids).sort((a, b) => a - b);
+}
+
+function gatewayEntrySummary(rule: GatewayEntryRule) {
+  const groups =
+    rule.group_ids.length === 0
+      ? localText("全部分组", "All groups")
+      : localText(`${rule.group_ids.length} 个分组`, `${rule.group_ids.length} groups`);
+  return `${rule.match_type} -> ${rule.upstream_type}, ${rule.intercept_strategy} ${rule.rewrite_target || ""} · ${groups}`;
+}
+
 function addLoginAgreementDocument() {
   form.login_agreement_documents.push({
     id: `custom-${Date.now().toString(36)}`,
@@ -7663,6 +7873,21 @@ async function loadSettings() {
     form.default_subscriptions = normalizeDefaultSubscriptionSettings(
       settings.default_subscriptions,
     );
+    form.gateway_entry_rules = Array.isArray(settings.gateway_entry_rules)
+      ? settings.gateway_entry_rules.map((rule) => ({
+          id: rule.id || `entry-${Date.now().toString(36)}`,
+          name: rule.name || "",
+          description: rule.description || "",
+          enabled: Boolean(rule.enabled),
+          match_type: rule.match_type || "prefix",
+          path: rule.path || "",
+          upstream_type: rule.upstream_type || "anthropic",
+          intercept_strategy: rule.intercept_strategy || "rewrite",
+          rewrite_target: rule.rewrite_target || "/v1",
+          group_ids: Array.isArray(rule.group_ids) ? rule.group_ids : [],
+          priority: Number(rule.priority) || 0,
+        }))
+      : [];
     registrationEmailSuffixWhitelistTags.value =
       normalizeRegistrationEmailSuffixDomains(
         settings.registration_email_suffix_whitelist,
@@ -7769,11 +7994,13 @@ async function loadSettings() {
 async function loadSubscriptionGroups() {
   try {
     const groups = await adminAPI.groups.getAll();
+    allGatewayGroups.value = groups.filter((group) => group.status === "active");
     subscriptionGroups.value = groups.filter(
       (group) =>
         group.subscription_type === "subscription" && group.status === "active",
     );
   } catch (_error: unknown) {
+    allGatewayGroups.value = [];
     subscriptionGroups.value = [];
   }
 }
@@ -8014,6 +8241,16 @@ async function saveSettings() {
       table_page_size_options: form.table_page_size_options,
       custom_menu_items: form.custom_menu_items,
       custom_endpoints: form.custom_endpoints,
+      gateway_entry_rules: form.gateway_entry_rules.map((rule) => ({
+        ...rule,
+        id: rule.id.trim(),
+        name: rule.name.trim(),
+        description: rule.description.trim(),
+        path: rule.path.trim(),
+        rewrite_target: rule.rewrite_target.trim(),
+        group_ids: Array.from(new Set(rule.group_ids || [])).sort((a, b) => a - b),
+        priority: Number(rule.priority) || 0,
+      })),
       frontend_url: form.frontend_url,
       smtp_host: form.smtp_host,
       smtp_port: form.smtp_port,

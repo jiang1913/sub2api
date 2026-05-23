@@ -2,6 +2,9 @@ import { defineConfig, loadEnv, Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import checker from 'vite-plugin-checker'
 import { resolve } from 'path'
+import http from 'http'
+import https from 'https'
+import { URL } from 'url'
 
 /**
  * Vite 插件：开发模式下注入公开配置到 index.html
@@ -34,6 +37,65 @@ function injectPublicSettings(backendUrl: string): Plugin {
   }
 }
 
+function proxyAuthenticatedGatewayRequests(backendUrl: string): Plugin {
+  const target = new URL(backendUrl)
+  const client = target.protocol === 'https:' ? https : http
+  const skipPrefixes = [
+    '/@',
+    '/src/',
+    '/node_modules/',
+    '/assets/',
+    '/public/',
+    '/favicon',
+    '/index.html'
+  ]
+
+  return {
+    name: 'proxy-authenticated-gateway-requests',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const path = req.url || '/'
+        const hasGatewayAuth =
+          typeof req.headers.authorization === 'string' ||
+          typeof req.headers['x-api-key'] === 'string' ||
+          typeof req.headers['x-goog-api-key'] === 'string'
+
+        if (!hasGatewayAuth || skipPrefixes.some((prefix) => path.startsWith(prefix))) {
+          next()
+          return
+        }
+
+        const headers = { ...req.headers }
+        headers.host = target.host
+
+        const proxyReq = client.request(
+          {
+            protocol: target.protocol,
+            hostname: target.hostname,
+            port: target.port,
+            method: req.method,
+            path,
+            headers
+          },
+          (proxyRes) => {
+            res.writeHead(proxyRes.statusCode || 502, proxyRes.headers)
+            proxyRes.pipe(res)
+          }
+        )
+
+        proxyReq.on('error', (error) => {
+          res.statusCode = 502
+          res.setHeader('content-type', 'application/json')
+          res.end(JSON.stringify({ error: `Dev gateway proxy failed: ${error.message}` }))
+        })
+
+        req.pipe(proxyReq)
+      })
+    }
+  }
+}
+
 export default defineConfig(({ mode }) => {
   // 加载环境变量
   const env = loadEnv(mode, process.cwd(), '')
@@ -46,7 +108,8 @@ export default defineConfig(({ mode }) => {
       checker({
         vueTsc: true
       }),
-      injectPublicSettings(backendUrl)
+      injectPublicSettings(backendUrl),
+      proxyAuthenticatedGatewayRequests(backendUrl)
     ],
   resolve: {
     alias: {

@@ -274,6 +274,7 @@ const (
 	SettingKeyAuthSourceDefaultDingTalkGrantOnSignup    = "auth_source_default_dingtalk_grant_on_signup"
 	SettingKeyAuthSourceDefaultDingTalkGrantOnFirstBind = "auth_source_default_dingtalk_grant_on_first_bind"
 	SettingKeyForceEmailOnThirdPartySignup              = "force_email_on_third_party_signup"
+	SettingKeyGatewayEntryRules                         = "gateway_entry_rules"
 
 	// 管理员 API Key
 	SettingKeyAdminAPIKey = "admin_api_key" // 全局管理员 API Key（用于外部系统集成）

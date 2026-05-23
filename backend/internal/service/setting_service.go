@@ -625,6 +625,24 @@ func (s *SettingService) GetAllSettings(ctx context.Context) (*SystemSettings, e
 }
 
 // GetFrontendURL 获取前端基础URL（数据库优先，fallback 到配置文件）
+func (s *SettingService) GetGatewayEntryRules(ctx context.Context) ([]GatewayEntryRule, error) {
+	if s == nil || s.settingRepo == nil {
+		return []GatewayEntryRule{}, nil
+	}
+	raw, err := s.settingRepo.GetValue(ctx, SettingKeyGatewayEntryRules)
+	if err != nil {
+		if errors.Is(err, ErrSettingNotFound) {
+			return []GatewayEntryRule{}, nil
+		}
+		return nil, err
+	}
+	rules, err := ParseGatewayEntryRules(raw)
+	if err != nil {
+		return nil, err
+	}
+	return rules, nil
+}
+
 func (s *SettingService) GetFrontendURL(ctx context.Context) string {
 	val, err := s.settingRepo.GetValue(ctx, SettingKeyFrontendURL)
 	if err == nil && strings.TrimSpace(val) != "" {
@@ -665,6 +683,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyTablePageSizeOptions,
 		SettingKeyCustomMenuItems,
 		SettingKeyCustomEndpoints,
+		SettingKeyGatewayEntryRules,
 		SettingKeyLinuxDoConnectEnabled,
 		SettingKeyDingTalkConnectEnabled,
 		SettingKeyWeChatConnectEnabled,
@@ -753,6 +772,11 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 	if loginAgreementUpdatedAt == "" {
 		loginAgreementUpdatedAt = defaultLoginAgreementDate
 	}
+	gatewayEntryRules := settings[SettingKeyGatewayEntryRules]
+	customEndpoints := settings[SettingKeyCustomEndpoints]
+	if rules, err := ParseGatewayEntryRules(gatewayEntryRules); err == nil {
+		customEndpoints = mergeCustomEndpointsWithGatewayEntries(customEndpoints, settings[SettingKeyAPIBaseURL], rules)
+	}
 
 	var balanceLowNotifyThreshold float64
 	if v, err := strconv.ParseFloat(settings[SettingKeyBalanceLowNotifyThreshold], 64); err == nil && v >= 0 {
@@ -788,7 +812,8 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		TableDefaultPageSize:             tableDefaultPageSize,
 		TablePageSizeOptions:             tablePageSizeOptions,
 		CustomMenuItems:                  settings[SettingKeyCustomMenuItems],
-		CustomEndpoints:                  settings[SettingKeyCustomEndpoints],
+		CustomEndpoints:                  customEndpoints,
+		GatewayEntryRules:                gatewayEntryRules,
 		LinuxDoOAuthEnabled:              linuxDoEnabled,
 		DingTalkOAuthEnabled:             dingTalkEnabled,
 		WeChatOAuthEnabled:               weChatEnabled,
@@ -1042,6 +1067,7 @@ type PublicSettingsInjectionPayload struct {
 	TablePageSizeOptions             []int                    `json:"table_page_size_options"`
 	CustomMenuItems                  json.RawMessage          `json:"custom_menu_items"`
 	CustomEndpoints                  json.RawMessage          `json:"custom_endpoints"`
+	GatewayEntryRules                json.RawMessage          `json:"gateway_entry_rules"`
 	LinuxDoOAuthEnabled              bool                     `json:"linuxdo_oauth_enabled"`
 	DingTalkOAuthEnabled             bool                     `json:"dingtalk_oauth_enabled"`
 	WeChatOAuthEnabled               bool                     `json:"wechat_oauth_enabled"`
@@ -1107,6 +1133,7 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		TablePageSizeOptions:             settings.TablePageSizeOptions,
 		CustomMenuItems:                  filterUserVisibleMenuItems(settings.CustomMenuItems),
 		CustomEndpoints:                  safeRawJSONArray(settings.CustomEndpoints),
+		GatewayEntryRules:                safeRawJSONArray(settings.GatewayEntryRules),
 		LinuxDoOAuthEnabled:              settings.LinuxDoOAuthEnabled,
 		DingTalkOAuthEnabled:             settings.DingTalkOAuthEnabled,
 		WeChatOAuthEnabled:               settings.WeChatOAuthEnabled,
@@ -1707,6 +1734,7 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 	updates[SettingKeyTablePageSizeOptions] = string(tablePageSizeOptionsJSON)
 	updates[SettingKeyCustomMenuItems] = settings.CustomMenuItems
 	updates[SettingKeyCustomEndpoints] = settings.CustomEndpoints
+	updates[SettingKeyGatewayEntryRules] = settings.GatewayEntryRules
 
 	// 默认配置
 	updates[SettingKeyDefaultConcurrency] = strconv.Itoa(settings.DefaultConcurrency)
@@ -2495,6 +2523,7 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyTablePageSizeOptions:                      "[10,20,50,100]",
 		SettingKeyCustomMenuItems:                           "[]",
 		SettingKeyCustomEndpoints:                           "[]",
+		SettingKeyGatewayEntryRules:                         "[]",
 		SettingKeyWeChatConnectEnabled:                      "false",
 		SettingKeyWeChatConnectAppID:                        "",
 		SettingKeyWeChatConnectAppSecret:                    "",
@@ -2687,6 +2716,7 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 		PurchaseSubscriptionURL:          strings.TrimSpace(settings[SettingKeyPurchaseSubscriptionURL]),
 		CustomMenuItems:                  settings[SettingKeyCustomMenuItems],
 		CustomEndpoints:                  settings[SettingKeyCustomEndpoints],
+		GatewayEntryRules:                settings[SettingKeyGatewayEntryRules],
 		BackendModeEnabled:               settings[SettingKeyBackendModeEnabled] == "true",
 	}
 	result.TableDefaultPageSize, result.TablePageSizeOptions = parseTablePreferences(

@@ -3,6 +3,8 @@ package dto
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/Wei-Shaw/sub2api/internal/service"
 )
 
 // CustomMenuItem represents a user-configured custom menu entry.
@@ -22,6 +24,8 @@ type CustomEndpoint struct {
 	Endpoint    string `json:"endpoint"`
 	Description string `json:"description"`
 }
+
+type GatewayEntryRule = service.GatewayEntryRule
 
 // SystemSettings represents the admin settings API response payload.
 type SystemSettings struct {
@@ -125,20 +129,21 @@ type SystemSettings struct {
 	GoogleOAuthRedirectURL            string `json:"google_oauth_redirect_url"`
 	GoogleOAuthFrontendRedirectURL    string `json:"google_oauth_frontend_redirect_url"`
 
-	SiteName                    string           `json:"site_name"`
-	SiteLogo                    string           `json:"site_logo"`
-	SiteSubtitle                string           `json:"site_subtitle"`
-	APIBaseURL                  string           `json:"api_base_url"`
-	ContactInfo                 string           `json:"contact_info"`
-	DocURL                      string           `json:"doc_url"`
-	HomeContent                 string           `json:"home_content"`
-	HideCcsImportButton         bool             `json:"hide_ccs_import_button"`
-	PurchaseSubscriptionEnabled bool             `json:"purchase_subscription_enabled"`
-	PurchaseSubscriptionURL     string           `json:"purchase_subscription_url"`
-	TableDefaultPageSize        int              `json:"table_default_page_size"`
-	TablePageSizeOptions        []int            `json:"table_page_size_options"`
-	CustomMenuItems             []CustomMenuItem `json:"custom_menu_items"`
-	CustomEndpoints             []CustomEndpoint `json:"custom_endpoints"`
+	SiteName                    string             `json:"site_name"`
+	SiteLogo                    string             `json:"site_logo"`
+	SiteSubtitle                string             `json:"site_subtitle"`
+	APIBaseURL                  string             `json:"api_base_url"`
+	ContactInfo                 string             `json:"contact_info"`
+	DocURL                      string             `json:"doc_url"`
+	HomeContent                 string             `json:"home_content"`
+	HideCcsImportButton         bool               `json:"hide_ccs_import_button"`
+	PurchaseSubscriptionEnabled bool               `json:"purchase_subscription_enabled"`
+	PurchaseSubscriptionURL     string             `json:"purchase_subscription_url"`
+	TableDefaultPageSize        int                `json:"table_default_page_size"`
+	TablePageSizeOptions        []int              `json:"table_page_size_options"`
+	CustomMenuItems             []CustomMenuItem   `json:"custom_menu_items"`
+	CustomEndpoints             []CustomEndpoint   `json:"custom_endpoints"`
+	GatewayEntryRules           []GatewayEntryRule `json:"gateway_entry_rules"`
 
 	DefaultConcurrency           int                          `json:"default_concurrency"`
 	DefaultBalance               float64                      `json:"default_balance"`
@@ -283,6 +288,7 @@ type PublicSettings struct {
 	TablePageSizeOptions             []int                    `json:"table_page_size_options"`
 	CustomMenuItems                  []CustomMenuItem         `json:"custom_menu_items"`
 	CustomEndpoints                  []CustomEndpoint         `json:"custom_endpoints"`
+	GatewayEntryRules                []GatewayEntryRule       `json:"gateway_entry_rules"`
 	DingTalkOAuthEnabled             bool                     `json:"dingtalk_oauth_enabled"`
 	LinuxDoOAuthEnabled              bool                     `json:"linuxdo_oauth_enabled"`
 	WeChatOAuthEnabled               bool                     `json:"wechat_oauth_enabled"`
@@ -474,6 +480,14 @@ func ParseCustomEndpoints(raw string) []CustomEndpoint {
 	var items []CustomEndpoint
 	if err := json.Unmarshal([]byte(raw), &items); err != nil {
 		return []CustomEndpoint{}
+	}
+	return items
+}
+
+func ParseGatewayEntryRules(raw string) []GatewayEntryRule {
+	items, err := service.ParseGatewayEntryRules(raw)
+	if err != nil {
+		return []GatewayEntryRule{}
 	}
 	return items
 }
